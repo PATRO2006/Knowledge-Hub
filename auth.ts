@@ -36,44 +36,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           clientId: process.env.AUTH_GITHUB_ID!,
           clientSecret: process.env.AUTH_GITHUB_SECRET!,
           checks: ["state"],
+          allowDangerousEmailAccountLinking: true,
         })]
       : []),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      // For GitHub OAuth: if the email already exists as a password account,
-      // link the GitHub account to it so we don't get OAuthAccountNotLinked.
-      if (account?.provider === "github" && user.email) {
-        const existing = await prisma.user.findUnique({ where: { email: user.email } });
-        if (existing) {
-          // Check if GitHub account is already linked
-          const linked = await prisma.account.findUnique({
-            where: {
-              provider_providerAccountId: {
-                provider: "github",
-                providerAccountId: account.providerAccountId,
-              },
-            },
-          });
-          if (!linked) {
-            await prisma.account.create({
-              data: {
-                userId: existing.id,
-                type: account.type,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-                access_token: account.access_token as string | undefined,
-                token_type: account.token_type as string | undefined,
-                scope: account.scope as string | undefined,
-              },
-            });
-          }
-          // Point user to the existing DB record so jwt gets the right id
-          user.id = existing.id;
-        }
-      }
-      return true;
-    },
     jwt({ token, user }) {
       if (user?.id) token.id = user.id;
       return token;
