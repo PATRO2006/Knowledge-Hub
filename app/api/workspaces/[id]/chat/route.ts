@@ -7,7 +7,7 @@ import { z } from "zod";
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2";
-const GROQ_MODEL = "llama3-8b-8192";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 const ChatSchema = z.object({
   message: z.string().min(1).max(2000),
