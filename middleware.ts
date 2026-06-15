@@ -9,6 +9,7 @@ export function middleware(req: NextRequest) {
   const isPublic =
     pathname === "/" ||
     pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
     pathname.startsWith("/api/auth");
 
   if (!isPublic && !token) {
