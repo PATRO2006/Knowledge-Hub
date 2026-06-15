@@ -2,32 +2,53 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
-    const res = await signIn("credentials", {
-      email: email.trim(),
-      password,
-      redirect: false,
-    });
+    if (password !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
 
-    if (res?.error) {
-      setError("Invalid email or password");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : data.error?.email?.[0] ?? data.error?.password?.[0] ?? "Signup failed"
+        );
+        return;
+      }
+
+      // Auto sign in after signup
+      await signIn("credentials", { email, password, callbackUrl: "/dashboard" });
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
-    } else {
-      router.push("/dashboard");
     }
   };
 
@@ -40,8 +61,8 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to Knowledge Hub</p>
+          <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
+          <p className="text-sm text-gray-500 mt-1">Sign up for Knowledge Hub</p>
         </div>
 
         <div className="card p-6 space-y-4">
@@ -58,30 +79,38 @@ export default function LoginPage() {
 
           <div className="relative flex items-center">
             <div className="flex-1 border-t border-gray-200" />
-            <span className="px-3 text-xs text-gray-400">or sign in with email</span>
+            <span className="px-3 text-xs text-gray-400">or sign up with email</span>
             <div className="flex-1 border-t border-gray-200" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="John Smith" required autoFocus />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="you@example.com" required autoFocus />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="you@example.com" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Your password" required />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Min. 8 characters" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="input" placeholder="Repeat password" required />
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
-            <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full">
-              {loading ? "Signing in..." : "Sign In"}
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-blue-600 hover:underline font-medium">Sign up</Link>
+            Already have an account?{" "}
+            <Link href="/login" className="text-blue-600 hover:underline font-medium">Sign in</Link>
           </p>
         </div>
       </div>
