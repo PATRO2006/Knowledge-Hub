@@ -38,27 +38,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       : []),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      // For GitHub OAuth, upsert the user in our database
-      if (account?.provider === "github" && user.email) {
-        const existing = await prisma.user.findUnique({ where: { email: user.email } });
-        if (!existing) {
-          const created = await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name ?? null,
-              image: user.image ?? null,
-            },
-          });
-          user.id = created.id;
+    async jwt({ token, user, account }) {
+      // On initial sign-in, persist our DB user id into the token
+      if (account && user?.email) {
+        if (account.provider === "github") {
+          // Find or create the user in our DB
+          let dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+          if (!dbUser) {
+            dbUser = await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name ?? null,
+                image: user.image ?? null,
+              },
+            });
+          }
+          token.id = dbUser.id;
+          token.name = dbUser.name;
+          token.email = dbUser.email;
+          token.picture = dbUser.image;
         } else {
-          user.id = existing.id;
+          // Credentials provider already returns our DB id
+          token.id = user.id;
         }
       }
-      return true;
-    },
-    jwt({ token, user }) {
-      if (user) token.id = user.id;
       return token;
     },
     session({ session, token }) {
